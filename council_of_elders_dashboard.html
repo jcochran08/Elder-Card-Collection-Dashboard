@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Council of Elders - Longevity Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'co-slate': '#1a202c',
+                        'co-accent': '#0056b3',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        :focus-visible {
+            outline: 4px solid #f6ad55 !important;
+            outline-offset: 2px !important;
+            box-shadow: 0 0 0 4px rgba(26, 32, 44, 1) !important;
+        }
+        
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            border: 0;
+        }
+        .card-aspect {
+            aspect-ratio: 2 / 3;
+        }
+
+        /* Loading Spinner */
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #0056b3;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-co-slate min-h-screen p-4 md:p-8 font-sans">
+    <div class="max-w-7xl mx-auto">
+        
+        <header class="mb-8 border-b-2 border-slate-200 pb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
+            <div>
+                <h1 class="text-4xl font-extrabold text-slate-950 mb-4">Council of Elders Collection</h1>
+                <p class="text-lg text-slate-700 max-w-3xl">Upload your collected elder cards to earn Longevity Points (LPs) and increase your rank.</p>
+            </div>
+            <div id="auth-status" class="text-sm font-medium text-slate-500 bg-slate-100 px-3 py-1 rounded-full flex items-center gap-2">
+                <div class="loader" id="auth-loader"></div>
+                <span id="user-id-display">Connecting...</span>
+            </div>
+        </header>
+
+        <section class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10" aria-labelledby="status-heading">
+            <h2 id="status-heading" class="sr-only">Your Progress and Rank Legend</h2>
+            
+            <div class="lg:col-span-1 bg-co-slate text-white p-6 rounded-2xl shadow-xl flex flex-col justify-between">
+                <div>
+                    <p class="text-sm font-bold uppercase tracking-widest text-slate-400">Current Rank</p>
+                    <p id="current-status" class="text-3xl font-extrabold mt-1 italic">Calculating...</p>
+                </div>
+                <div class="mt-8 border-t border-slate-700 pt-4">
+                    <p class="text-sm font-medium text-slate-300">Longevity Points (LPs)</p>
+                    <p class="text-5xl font-black text-amber-400"><span id="total-points">0</span> <span class="text-xl font-bold text-white">LPs</span></p>
+                    <p class="text-sm mt-1 text-slate-300"><span id="cards-collected">0</span> of 18 cards collected</p>
+                </div>
+            </div>
+
+            <div class="lg:col-span-2 bg-white p-6 rounded-2xl shadow border border-slate-200">
+                <h3 class="text-lg font-bold mb-4 text-slate-950">Rank Advancement Legend</h3>
+                <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
+                    <div class="border-l-4 border-slate-300 pl-3">
+                        <dt class="font-bold text-slate-900">Apprentice</dt>
+                        <dd class="text-sm text-slate-700">Starting rank (0-5 cards).</dd>
+                    </div>
+                    <div class="border-l-4 border-blue-500 pl-3">
+                        <dt class="font-bold text-blue-900">Wayfinder</dt>
+                        <dd class="text-sm text-slate-700">Achieved at 6 cards (60 LPs).</dd>
+                    </div>
+                    <div class="border-l-4 border-purple-500 pl-3">
+                        <dt class="font-bold text-purple-900">Lorebinder</dt>
+                        <dd class="text-sm text-slate-700">Achieved at 12 cards (120 LPs).</dd>
+                    </div>
+                    <div class="border-l-4 border-amber-500 pl-3">
+                        <dt class="font-bold text-amber-900">Future-Bound Elder</dt>
+                        <dd class="text-sm text-slate-700">Achieved at 18 cards (180 LPs).</dd>
+                    </div>
+                </dl>
+            </div>
+        </section>
+
+        <main id="dashboard" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+            <!-- Dynamic Zone Content -->
+            <div class="col-span-full py-20 text-center text-slate-400">
+                <p>Syncing collection data...</p>
+            </div>
+        </main>
+
+        <footer class="mt-16 pt-8 border-t border-slate-200 text-center text-slate-600 pb-8">
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-2xl mx-auto mb-4 text-sm text-blue-900">
+                <strong><span aria-hidden="true"> ☁️ </span> Cloud Sync Active:</strong> Your progress is synced to your account and available anywhere you sign in.
+            </div>
+            <p>&copy; 2023 University Council of Elders Learning Tool</p>
+        </footer>
+    </div>
+
+    <!-- Hidden File Input -->
+    <input type="file" id="file-uploader" accept="image/*" class="sr-only" aria-hidden="true">
+
+    <!-- UI Feedback Toast -->
+    <div id="toast" class="fixed bottom-8 left-1/2 -translate-x-1/2 px-6 py-3 bg-slate-900 text-white rounded-full shadow-2xl transition-all opacity-0 pointer-events-none translate-y-4 z-[100]">
+        <span id="toast-message"></span>
+    </div>
+
+    <!-- Custom Dialog Modal (Replace confirm/alert) -->
+    <div id="custom-dialog" class="fixed inset-0 bg-slate-900/80 z-[60] flex items-center justify-center p-4 hidden" role="dialog" aria-modal="true">
+        <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md border border-slate-200">
+            <h3 id="dialog-title" class="text-xl font-bold mb-2">Title</h3>
+            <p id="dialog-desc" class="text-slate-600 mb-6">Description message goes here.</p>
+            <div class="flex justify-end gap-3">
+                <button id="dialog-cancel" class="px-5 py-2.5 rounded-md bg-slate-100 text-slate-800 font-semibold hover:bg-slate-200 transition text-sm">Cancel</button>
+                <button id="dialog-confirm" class="px-5 py-2.5 rounded-md bg-red-600 text-white font-semibold hover:bg-red-700 transition text-sm">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Accessibility Modal -->
+    <div id="alt-modal" class="fixed inset-0 bg-slate-900/80 z-50 flex items-center justify-center p-4 hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg border border-slate-200">
+            <h3 id="modal-title" class="text-xl font-bold mb-1">Confirm Elder Card Details</h3>
+            <p class="text-sm text-slate-600 mb-5">Please provide alternative text describing the image for accessibility.</p>
+            
+            <label for="alt-text-input" class="block text-sm font-bold mb-1.5 text-slate-900">Image Description (Alternative Text)</label>
+            <textarea id="alt-text-input" rows="4" class="w-full p-3 border border-slate-300 rounded-md focus:ring-2 focus:ring-co-accent focus:border-co-accent bg-white text-co-slate"></textarea>
+            
+            <div class="flex justify-end gap-3 mt-6">
+                <button id="modal-cancel-btn" class="px-5 py-2.5 rounded-md bg-slate-100 text-slate-800 font-semibold hover:bg-slate-200 transition text-sm">Cancel</button>
+                <button id="modal-save-btn" class="px-5 py-2.5 rounded-md bg-co-accent text-white font-semibold hover:bg-blue-800 transition text-sm flex items-center gap-2">
+                    <span id="save-spinner" class="loader hidden w-4 h-4 border-white border-t-transparent"></span>
+                    Save Card
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot, collection, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Firebase Configuration
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'co-elders-1';
+
+        // Local State
+        let studentProgress = {};
+        let currentUser = null;
+        let currentUploadContext = null;
+
+        const dashboardData = {
+            pointsPerCard: 10,
+            ranks: [
+                { name: 'Apprentice', minCards: 0 },
+                { name: 'Wayfinder', minCards: 6 },
+                { name: 'Lorebinder', minCards: 12 },
+                { name: 'Future-Bound Elder', minCards: 18 }
+            ],
+            zones: [
+                'Okinawa', 'Sardinia', 'Loma-Linda', 'Ikaria', 'Nicoya', 'Singapore'
+            ]
+        };
+
+        const standardDescription = "collector card with profile image of the elder and information about the elder's age, location, and key characteristics and practices";
+
+        // UI Helpers
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-message').innerText = msg;
+            toast.classList.remove('opacity-0', 'translate-y-4', 'pointer-events-none');
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-4', 'pointer-events-none');
+            }, 3000);
+        }
+
+        function showDialog({ title, desc, onConfirm, confirmText = "Confirm", isDanger = false }) {
+            const dialog = document.getElementById('custom-dialog');
+            const confirmBtn = document.getElementById('dialog-confirm');
+            document.getElementById('dialog-title').innerText = title;
+            document.getElementById('dialog-desc').innerText = desc;
+            confirmBtn.innerText = confirmText;
+            
+            if (isDanger) {
+                confirmBtn.classList.replace('bg-co-accent', 'bg-red-600');
+                confirmBtn.classList.replace('hover:bg-blue-800', 'hover:bg-red-700');
+            } else {
+                confirmBtn.classList.replace('bg-red-600', 'bg-co-accent');
+                confirmBtn.classList.replace('hover:bg-red-700', 'hover:bg-blue-800');
+            }
+
+            dialog.classList.remove('hidden');
+            
+            const cleanup = () => {
+                dialog.classList.add('hidden');
+                confirmBtn.onclick = null;
+                document.getElementById('dialog-cancel').onclick = null;
+            };
+
+            confirmBtn.onclick = () => { onConfirm(); cleanup(); };
+            document.getElementById('dialog-cancel').onclick = cleanup;
+        }
+
+        // Firebase Sync
+        async function initAuth() {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (error) {
+                console.error("Auth Error", error);
+                showToast("Connection failed. Please refresh.");
+            }
+        }
+
+        onAuthStateChanged(auth, (user) => {
+            currentUser = user;
+            if (user) {
+                document.getElementById('auth-loader').classList.add('hidden');
+                document.getElementById('user-id-display').innerText = `ID: ${user.uid.substring(0, 8)}...`;
+                setupSync(user.uid);
+            }
+        });
+
+        function setupSync(uid) {
+            const userColl = collection(db, 'artifacts', appId, 'users', uid, 'cards');
+            onSnapshot(userColl, (snapshot) => {
+                const newData = {};
+                snapshot.forEach(doc => {
+                    newData[doc.id] = doc.data();
+                });
+                studentProgress = newData;
+                updateScoringUI();
+                renderDashboard();
+            }, (err) => {
+                console.error("Sync Error", err);
+                showToast("Error syncing with cloud.");
+            });
+        }
+
+        async function saveCard(key, data) {
+            if (!currentUser) return;
+            const docRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'cards', key);
+            try {
+                await setDoc(docRef, data);
+                showToast("Card saved to cloud!");
+            } catch (err) {
+                showToast("Failed to save card.");
+            }
+        }
+
+        async function removeCard(key, zoneName, level) {
+            if (!currentUser) return;
+            
+            showDialog({
+                title: "Remove Card?",
+                desc: `Are you sure you want to remove the Level ${level} card for ${zoneName}? This action cannot be undone.`,
+                isDanger: true,
+                onConfirm: async () => {
+                    const zoneId = key.split('_')[0];
+                    const targets = [key];
+                    if (level === 1) { targets.push(`${zoneId}_L2`, `${zoneId}_L3`); }
+                    else if (level === 2) { targets.push(`${zoneId}_L3`); }
+
+                    for (const t of targets) {
+                        const docRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'cards', t);
+                        await deleteDoc(docRef);
+                    }
+                    showToast("Card(s) removed.");
+                }
+            });
+        }
+
+        // Dashboard Logic
+        function updateScoringUI() {
+            const collectedCount = Object.keys(studentProgress).length;
+            const points = collectedCount * dashboardData.pointsPerCard;
+            
+            document.getElementById('total-points').innerText = points;
+            document.getElementById('cards-collected').innerText = collectedCount;
+
+            let currentRank = dashboardData.ranks[0].name;
+            for (let i = dashboardData.ranks.length - 1; i >= 0; i--) {
+                if (collectedCount >= dashboardData.ranks[i].minCards) {
+                    currentRank = dashboardData.ranks[i].name;
+                    break;
+                }
+            }
+            document.getElementById('current-status').innerText = currentRank;
+        }
+
+        function renderDashboard() {
+            const container = document.getElementById('dashboard');
+            container.innerHTML = ''; 
+            
+            dashboardData.zones.forEach(zoneName => {
+                const zoneId = zoneName.toLowerCase().replace('-', '');
+                const section = document.createElement('section');
+                section.className = 'bg-white p-6 rounded-2xl shadow border border-slate-200';
+                section.setAttribute('aria-labelledby', `zone-hd-${zoneId}`);
+
+                const headerHTML = `
+                    <div class="mb-5 flex items-baseline justify-between border-b border-slate-100 pb-3">
+                        <h3 id="zone-hd-${zoneId}" class="text-2xl font-bold text-slate-950">${zoneName}</h3>
+                        <span class="text-sm text-slate-600 font-medium" aria-hidden="true">Levels 1-3</span>
+                    </div>
+                `;
+
+                const grid = document.createElement('div');
+                grid.className = 'grid grid-cols-3 gap-3';
+
+                for (let level = 1; level <= 3; level++) {
+                    const cardKey = `${zoneId}_L${level}`;
+                    const cardData = studentProgress[cardKey];
+                    const slot = document.createElement('div');
+                    slot.className = 'card-aspect relative rounded-lg border-2 overflow-hidden bg-slate-50 transition focus-within:ring-4 focus-within:ring-co-accent';
+                    
+                    let isUnlocked = (level === 1) || !!studentProgress[`${zoneId}_L${level - 1}`];
+
+                    if (cardData) {
+                        slot.classList.add('border-slate-200');
+                        const img = document.createElement('img');
+                        img.src = cardData.imgData;
+                        img.alt = cardData.alt;
+                        img.className = 'w-full h-full object-cover';
+                        slot.appendChild(img);
+
+                        const deleteBtn = document.createElement('button');
+                        deleteBtn.className = 'absolute top-1 right-1 bg-white/90 text-red-700 p-1.5 rounded-full hover:bg-red-50 focus:ring-2 focus:ring-red-600 focus:outline-none shadow-sm';
+                        deleteBtn.setAttribute('aria-label', `Remove Level ${level} card for ${zoneName}`);
+                        deleteBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>';
+                        deleteBtn.onclick = () => removeCard(cardKey, zoneName, level);
+                        slot.appendChild(deleteBtn);
+
+                        const label = document.createElement('div');
+                        label.className = 'absolute bottom-0 left-0 right-0 bg-slate-900/70 text-white text-center text-[10px] py-1 font-bold';
+                        label.innerHTML = `Lvl ${level}`;
+                        slot.appendChild(label);
+                    } else if (!isUnlocked) {
+                        slot.classList.add('border-slate-200', 'flex', 'items-center', 'justify-center');
+                        slot.innerHTML = `<div class="text-center text-slate-300 p-2 opacity-50"><svg class="w-5 h-5 mx-auto mb-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"></path></svg><span class="text-[10px] font-semibold uppercase tracking-tighter">Locked</span></div>`;
+                    } else {
+                        slot.classList.add('border-co-accent', 'border-dashed', 'bg-blue-50/50', 'hover:bg-blue-100', 'cursor-pointer');
+                        const uploadBtn = document.createElement('button');
+                        uploadBtn.className = 'w-full h-full flex flex-col items-center justify-center p-2 text-co-accent focus:outline-none';
+                        uploadBtn.innerHTML = `<svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg><span class="text-xs font-bold">Lvl ${level}</span>`;
+                        uploadBtn.onclick = () => initiateUpload(cardKey);
+                        slot.appendChild(uploadBtn);
+                    }
+                    grid.appendChild(slot);
+                }
+                section.appendChild(document.createRange().createContextualFragment(headerHTML));
+                section.appendChild(grid);
+                container.appendChild(section);
+            });
+        }
+
+        // File/Upload Handling
+        function sanitizeFilename(filename) {
+            return filename.replace(/\.[^/.]+$/, "").replace(/[-_]/g, ' ');
+        }
+
+        function initiateUpload(cardKey) {
+            currentUploadContext = cardKey;
+            document.getElementById('file-uploader').click();
+        }
+
+        document.getElementById('file-uploader').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file || !currentUploadContext) return;
+            
+            // Check size (Firestore docs limited to 1MB)
+            if (file.size > 800000) {
+                showDialog({
+                    title: "File Too Large",
+                    desc: "To ensure fast syncing, please upload an image smaller than 800KB.",
+                    confirmText: "Okay",
+                    onConfirm: () => {}
+                });
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                openAltModal(sanitizeFilename(file.name), event.target.result);
+            };
+            reader.readAsDataURL(file);
+            e.target.value = ''; 
+        });
+
+        const modal = document.getElementById('alt-modal');
+        const altInput = document.getElementById('alt-text-input');
+        let lastFocusedElement = null;
+
+        function openAltModal(cleanName, imgData) {
+            lastFocusedElement = document.activeElement;
+            altInput.value = `${cleanName}, ${standardDescription}`;
+            currentUploadContext = { key: currentUploadContext, imgData: imgData };
+            modal.classList.remove('hidden');
+            altInput.focus();
+        }
+
+        function closeAltModal() {
+            modal.classList.add('hidden');
+            document.getElementById('save-spinner').classList.add('hidden');
+            if (lastFocusedElement) lastFocusedElement.focus();
+        }
+
+        document.getElementById('modal-cancel-btn').onclick = closeAltModal;
+        document.getElementById('modal-save-btn').onclick = async function() {
+            const altText = altInput.value.trim();
+            if (!altText) return;
+            
+            document.getElementById('save-spinner').classList.remove('hidden');
+            await saveCard(currentUploadContext.key, { 
+                imgData: currentUploadContext.imgData, 
+                alt: altText,
+                timestamp: Date.now()
+            });
+            closeAltModal();
+        };
+
+        // App Start
+        window.addEventListener('load', () => {
+            initAuth();
+            renderDashboard();
+        });
+    </script>
+</body>
+</html>
